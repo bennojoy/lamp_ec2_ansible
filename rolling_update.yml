@@ -1,0 +1,53 @@
+---
+# This playbook does a rolling update for all webservers serially (one at a time).
+# Change the value of serial: to adjust the number of server to be updated.
+#
+# The three roles that apply to the webserver hosts will be applied: common,
+# base-apache, and web. So any changes to configuration, package updates, etc,
+# will be applied as part of the rolling update process.
+#
+
+# gather facts from monitoring nodes for iptables rules
+
+- hosts: "{{ 'tag_role_' + environ +'_web_server' }}"
+  user: root
+  vars:
+   environ: stage
+  serial: 1
+
+  # These are the tasks to run before applying updates:
+  pre_tasks:
+  - ec2_facts:
+
+  - name: Include the variables specific to the vpc
+    include_vars: envs/{{ environ }}
+  
+  - name: Instance DERegister
+    local_action: ec2_elb
+    args:
+      region: "{{ ec2_region }}"
+      ec2_access_key: "{{ ec2_access_key }}"
+      ec2_secret_key: "{{ ec2_secret_key }}"
+      instance_id: "{{ ansible_ec2_instance_id }}"
+      ec2_elbs: "{{ vpc_pub_lb_name }}"
+      state: 'absent' 
+
+  roles:
+  - common
+  - base-apache
+  - web
+
+  # These tasks run after the roles:
+  post_tasks:
+  - name: Wait for webserver to come up
+    wait_for: host={{ inventory_hostname }} port=80 state=started timeout=80
+  
+  - name: Instance DERegister
+    local_action: ec2_elb
+    args:
+      region: "{{ ec2_region }}"
+      ec2_access_key: "{{ ec2_access_key }}"
+      ec2_secret_key: "{{ ec2_secret_key }}"
+      instance_id: "{{ ansible_ec2_instance_id }}"
+      ec2_elbs: "{{ vpc_pub_lb_name }}"
+      state: 'present' 

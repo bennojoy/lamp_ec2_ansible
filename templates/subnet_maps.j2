@@ -1,0 +1,15 @@
+{% set web="" %}
+{% set db="" %}
+{% for j in vpc.subnets %} 
+{% if j.resource_tags['Tier'] == 'Web' %}
+{% set web = web + j.id + ","%}
+{% endif %}
+{% if j.resource_tags['Tier'] == 'Db' %}
+{% set db = db + j.id + ',' %}
+{% endif %}
+{% if loop.last %}
+{{ 'web: "' + web[:-1] + '"' }}
+{{ 'db: "' + db[:-1] + '"' }}
+{% endif %}
+{% endfor %}
+

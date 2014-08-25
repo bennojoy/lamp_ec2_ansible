@@ -1,0 +1,99 @@
+---
+# The variables for dev vpc environment
+
+vpc_cidr_block: 10.1.0.0/16
+vpc_subnets:
+    - cidr: 10.1.1.0/24
+      az: us-east-1c
+      resource_tags: { "Environment":"Stage", "Tier" : "Web"}
+    - cidr: 10.1.2.0/24
+      az: us-east-1b
+      resource_tags: { "Environment":"Stage", "Tier" : "Web"}
+    - cidr: 10.1.3.0/24
+      az: us-east-1b
+      resource_tags: { "Environment":"Stage", "Tier" : "Db"}
+    - cidr: 10.1.4.0/24
+      az: us-east-1c
+      resource_tags: { "Environment":"Stage", "Tier" : "Db"}
+vpc_internet_gateway: "yes"
+vpc_route_tables_public:
+    - subnets:
+       - 10.1.1.0/24
+      routes:
+       - dest: 0.0.0.0/0
+         gw: igw
+    - subnets:
+       - 10.1.2.0/24
+      routes:
+       - dest: 0.0.0.0/0
+         gw: igw
+
+
+# The variable for configuring security group and thier ingress rules
+
+vpc_security_groups:
+  - name: stage-web
+    desc: the security group for the web servers
+    rules:
+      - proto: tcp
+        from_port: 80
+        to_port: 80
+        cidr_ip: 0.0.0.0/0
+      - proto: tcp
+        from_port: 443
+        to_port: 443
+        cidr_ip: 0.0.0.0/0
+      - proto: tcp
+        from_port: 22
+        to_port: 22
+        cidr_ip: 0.0.0.0/0
+  
+  - name: stage-db
+    desc: the security group for the web servers
+    rules:
+      - proto: tcp
+        from_port: "{{ rds_db_port }}"
+        to_port: "{{ rds_db_port }}"
+        cidr_ip: "{{ vpc_cidr_block }}"
+
+
+#The variables for the Loadbalancer
+
+vpc_pub_lb_name: stage-pub-lb
+vpc_pub_lb_listeners:
+  - protocol: http
+    load_balancer_port: 80
+    instance_port: 80
+    instance_protocol: http
+vpc_pub_lb_health_check:
+    ping_protocol: http 
+    ping_port: 80
+    ping_path: "/index.html" 
+    response_timeout: 5 
+    interval: 30 
+    unhealthy_threshold: 2
+    healthy_threshold: 10
+
+
+
+# Paramters for the Instances to be created in this environment.
+
+instance_type: c1.medium
+image_id:  ami-8997afe0
+keypair: benkey
+exact_count: 2       #per zone
+
+#Parmaters for the RDS Instance
+
+rds_subnet_name: rsubnet
+rds_subnet_description: "RDS subnet group"
+rds_instance_name: "mysql-stage"
+rds_size: 10
+rds_db_type: "db.m1.small"
+rds_username: "mysql_admin"
+rds_password: 1nsecure
+rds_backup_retention: 0
+rds_db_name: mydb
+rds_db_port: 3306
+
+
